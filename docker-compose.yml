@@ -1,0 +1,63 @@
+version: "3"
+services:
+  nginx:
+    image: yfix/nginx:1.18
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    links:
+      - php
+      - redis
+    depends_on:
+      - php
+    volumes:
+      - ./:/var/www/
+      - ./docker/etc/nginx:/etc/nginx
+      - ./docker/var/log/nginx:/var/log/nginx
+      - ./docker/var/log/supervisor:/var/log/supervisor
+    
+  php:
+    image: yfix/php:7.4
+    restart: always
+    links:
+      - mysql
+      - redis
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - ./:/var/www/
+      - ./docker/etc/php/cli/php.ini:/etc/php/cli/php.ini
+      - ./docker/etc/php/fpm/php.ini:/etc/php/fpm/php.ini
+      - ./docker/etc/php/fpm/php-fpm.conf:/etc/php/fpm/php-fpm.conf
+      - ./docker/etc/php/fpm/pool.d/www.conf:/etc/php/fpm/pool.d/www.conf
+      - ./docker/etc/cron.d/:/etc/cron.d/
+      - ./docker/etc/supervisor/conf.d/:/etc/supervisor/conf.d/
+      - ./docker/var/log/php:/var/log/php
+      - ./docker/var/log/supervisor:/var/log/supervisor
+  
+  mysql:
+    image: mysql:5.7
+    restart: always
+    # Use this only for development, as there are tons of other not used here env vars
+    environment:
+      - MYSQL_DATABASE=${DB_DATABASE}
+      - MYSQL_USER=${DB_USERNAME}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_INITDB_SKIP_TZINFO="yes"
+    volumes:
+      - ./docker/var/lib/mysql:/var/lib/mysql
+
+  redis:
+    image: yfix/redis
+    restart: always
+    ports:
+      - "27779:6379"
+    volumes:
+      - ./docker/redis-data:/data
+      - ./docker/etc/redis/redis.conf:/etc/redis/redis.conf
+      - ./docker/var/log/redis:/var/log/redis
+    command: ["redis-server", "/etc/redis/redis.conf"]
+
